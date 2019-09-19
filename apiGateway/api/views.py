@@ -16,9 +16,9 @@ class UploadView(APIView) :
         minioClient = minio.Minio('s3.docker:9000',
                                 access_key="password",
                                 secret_key="password",
-                                secure=True)
+                                secure=False)
         try:
-            minioClient.make_bucket("maylogs")
+            buckets = minioClient.make_bucket("testbuck");
         except BucketAlreadyOwnedByYou as err:
             pass
         except BucketAlreadyExists as err:
@@ -32,4 +32,4 @@ class UploadView(APIView) :
         #    "body" : r.text,
         #}
 
-        return Response("ok")
+        return Response(buckets)

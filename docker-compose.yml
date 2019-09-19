@@ -17,13 +17,13 @@ services:
     container_name: s3
     command:
       server /data
-    command:
-      gateway gcs
+    #command:
+    #  gateway gcs
     volumes:
       - "dev-volume:/data"
       - ./credentials.json:/credentials.json
     environment:
-      GOOGLE_APPLICATION_CREDENTIALS: '/credentials.json'
+      #GOOGLE_APPLICATION_CREDENTIALS: '/credentials.json'
       MINIO_ACCESS_KEY: 'password'
       MINIO_SECRET_KEY: 'password'
     networks:
