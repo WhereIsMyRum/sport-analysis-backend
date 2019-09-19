@@ -30,6 +30,8 @@ services:
       - main_network
     depends_on:
       - db.internal
+    expose:
+      - "80"
 
   webapp.docker:
     container_name: webapp
