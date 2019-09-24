@@ -24,14 +24,12 @@ services:
       - ./credentials.json:/credentials.json
     environment:
       #GOOGLE_APPLICATION_CREDENTIALS: '/credentials.json'
-      MINIO_ACCESS_KEY: 'password'
+      MINIO_ACCESS_KEY: 'admin'
       MINIO_SECRET_KEY: 'password'
     networks:
       - main_network
     depends_on:
       - db.internal
-    expose:
-      - "80"
 
   webapp.docker:
     container_name: webapp
@@ -43,7 +41,7 @@ services:
       - db.internal
     networks:
       - main_network
-  
+
   nginx:
     image: nginx:latest
     container_name: nginx

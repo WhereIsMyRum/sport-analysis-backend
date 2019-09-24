@@ -16,8 +16,13 @@ class UploadView(APIView) :
 
     def get(self, request) :
         minioClient = utils.getMinioClient()
+        file_name = "uncut_video"
+
+        if (request.GET.get('fname')) :
+            file_name = request.GET.get('fname')
 
         request_hardcoded={'user_id':1}
+
         try:
             storage_queryset = models.UserStorage.objects.get(user_id = request_hardcoded['user_id'])
         except :
@@ -33,13 +38,13 @@ class UploadView(APIView) :
             entries_queryset = models.UserStorageEntries.objects.filter(storage_id = storage_queryset.user_id)
             serializer = serializers.UserStorageEntriesSerializer()
             subfolder_entry_id = len(entries_queryset) + 1
-            storage_entry = serializer.create(storage_queryset,request_hardcoded['user_id'],subfolder_entry_id)
+            #storage_entry = serializer.create(storage_queryset,request_hardcoded['user_id'],subfolder_entry_id)
 
         except :
             serializer = serializers.UserStorageEntriesSerializer()
             subfolder_entry_id = 1
-            storage_entry = serializer.create(storage_queryset,request_hardcoded['user_id'],subfolder_entry_id)
+            #storage_entry = serializer.create(storage_queryset,request_hardcoded['user_id'],subfolder_entry_id)
 
-        presigned = minioClient.presigned_put_object(settings.DEFAULT_BUCKET, "vid")
+        presigned = minioClient.presigned_put_object(settings.DEFAULT_BUCKET, "user_{}/entry_{}/{}".format(request_hardcoded['user_id'], subfolder_entry_id, file_name))
 
         return Response(presigned)
