@@ -42,6 +42,16 @@ services:
     networks:
       - main_network
 
+  rabbitMq.internal:
+    image: rabbitmq:latest
+    container_name: rabbit
+    networks: 
+      - main_network
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbit
+    ports:
+      - 5672:5672
+
   nginx:
     image: nginx:latest
     container_name: nginx
