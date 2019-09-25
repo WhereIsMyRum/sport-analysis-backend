@@ -15,14 +15,14 @@ services:
   s3.docker:
     image: minio/minio
     container_name: s3
-    command:
-      server /data
     #command:
     #  gateway gcs
     volumes:
       - "dev-volume:/data"
-      - ./credentials.json:/credentials.json
+      - ./s3/credentials.json:/credentials.json
+    command: server /data
     environment:
+      # use only with google cloud storage (gcs) gateway
       #GOOGLE_APPLICATION_CREDENTIALS: '/credentials.json'
       MINIO_ACCESS_KEY: 'admin'
       MINIO_SECRET_KEY: 'password'
@@ -30,6 +30,7 @@ services:
       - main_network
     depends_on:
       - db.internal
+      - rabbit.internal
 
   webapp.docker:
     container_name: webapp
@@ -42,15 +43,19 @@ services:
     networks:
       - main_network
 
-  rabbitMq.internal:
-    image: rabbitmq:latest
+  rabbit.internal:
+    image: rabbitmq:3.7.18-management
+    # below image used if no management is needed
+    #image: rabbitmq:latest
     container_name: rabbit
     networks: 
       - main_network
-    volumes:
-      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbit
+    #volumes:
+    #  - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbit
     ports:
       - 5672:5672
+      # below ports are only needed if management panel needs to be enabled
+      - 15672:15672
 
   nginx:
     image: nginx:latest
