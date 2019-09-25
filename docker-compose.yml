@@ -34,7 +34,7 @@ services:
   webapp.docker:
     container_name: webapp
     build: .
-    command: gunicorn apiGateway.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    command: bash -c "python manage.py migrate && gunicorn apiGateway.wsgi:application --bind 0.0.0.0:8000 --workers 3"
     volumes:
       - ./apiGateway/:/usr/src/apiGateway
     depends_on:
