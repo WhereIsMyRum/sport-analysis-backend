@@ -30,11 +30,11 @@ services:
       - main_network
     depends_on:
       - db.internal
-      - rabbit.internal
+      - rabbit.docker
 
   webapp.docker:
     container_name: webapp
-    build: .
+    build: './apiGateway'
     command: bash -c "python manage.py migrate && gunicorn apiGateway.wsgi:application --bind 0.0.0.0:8000 --workers 3"
     volumes:
       - ./apiGateway/:/usr/src/apiGateway
@@ -43,19 +43,27 @@ services:
     networks:
       - main_network
 
-  rabbit.internal:
+  rabbit.docker:
     image: rabbitmq:3.7.18-management
     # below image used if no management is needed
     #image: rabbitmq:latest
     container_name: rabbit
     networks: 
       - main_network
-    #volumes:
-    #  - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbit
     ports:
       - 5672:5672
-      # below ports are only needed if management panel needs to be enabled
-      - 15672:15672
+
+  vidapp.internal:
+    container_name: vidapp
+    build: './vidapp'
+    command: bash -c "python -u rabbit.py"
+    volumes:
+      - ./vidapp/rabbit.py:/usr/src/vidapp/rabbit.py
+      - ./utilsClasses/rabbitConnection.py:/usr/src/vidapp/rabbitConnection.py
+    depends_on:
+      - rabbit.docker
+    networks:
+      - main_network
 
   nginx:
     image: nginx:latest
@@ -65,6 +73,8 @@ services:
       - 443:443
       - 3306:3306
       - 9000:9000
+      # below ports are only needed if management panel needs to be enabled
+      - 15672:15672
     volumes:
         - ./config/nginx/conf.d:/etc/nginx/conf.d
         - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf

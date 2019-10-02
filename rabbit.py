@@ -1,24 +1,52 @@
 #!/usr/bin/env python
-import pika
+import pika, json, re, MySQLdb
 
-connection = pika.BlockingConnection(pika.ConnectionParameters(
-        host='localhost'))
-channel = connection.channel()
+RESULT_KEY = "\/user_[0-9]{1,3}\/entry_[0-9]{1,3}\/f_"
+INITIAL_KEY = "\/user_[0-9]{1,3}\/entry_[0-9]{1,3}\/.+mp4"
+EVENT_NAME = "ObjectCreated:Put"
 
-channel.exchange_declare(exchange='bucketevents',
-                         exchange_type='fanout')
+class rabbitConnection :
+        def __init__(self):
+                self.connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
+                self.channel = self.connection.channel()
 
-result = channel.queue_declare("",exclusive=False)
-queue_name = result.method.queue
+                self.queues_dict = {}
+                self.exchanges_dict = {}
 
-channel.queue_bind(exchange='bucketevents',
-                   queue=queue_name)
+        def publish(self, routing_key, body, exchange='') :
+                self.channel.basic_publish(exchange, routing_key=routing_key, body=body)
 
-print(' [*] Waiting for logs. To exit press CTRL+C')
+        def declare_exchange(self, exchange, exchange_type) :
+                self.exchanges_dict[exchange] = self.channel.exchange_declare(exchange=exchange, exchange_type=exchange_type)
 
-def callback(ch, method, properties, body):
-    print(" [x] %r" % body)
+        def declare_queue(self, queue_name, exclusive=False) :
+                self.queues_dict[queue_name] = self.channel.queue_declare(queue=queue_name, exclusive=exclusive)
 
-channel.basic_consume(on_message_callback=callback, queue=queue_name)
+        def bind_queue(self, exchange, queue_name) :
+                self.channel.queue_bind(exchange=exchange, queue=self.queues_dict[queue_name].method.queue)
 
-channel.start_consuming()
+        def bind_consume(self, callback, queue_name, auto_ack=True) :
+                self.channel.basic_consume(on_message_callback=callback, queue=self.queues_dict[queue_name].method.queue, auto_ack=auto_ack)
+
+        def consume(self) :
+                self.channel.start_consuming()
+
+
+        def callback(self,ch, method, properties, body):
+                body_js = json.loads(body.decode('utf-8'))
+                if (re.search(EVENT_NAME, body_js['EventName'])) :
+                        if (re.search(INITIAL_KEY, body_js['Key'])) :
+                                self.publish(exchange='',routing_key='video_analyzer', body=body_js['Key'])
+
+
+
+
+message_dispatcher = rabbitConnection()
+message_dispatcher.declare_exchange("bucketevents", "fanout")
+message_dispatcher.declare_queue("message_dispatcher_queue")
+message_dispatcher.bind_queue("bucketevents", "message_dispatcher_queue")
+message_dispatcher.bind_consume(message_dispatcher.callback, "message_dispatcher_queue")
+
+message_dispatcher.consume()
+
+
