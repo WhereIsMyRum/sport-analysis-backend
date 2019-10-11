@@ -20,6 +20,7 @@ services:
     volumes:
       - "dev-volume:/data"
       - ./s3/credentials.json:/credentials.json
+      #- ./s3/config.json:/data/.minio.sys/config/config.json
     command: server /data
     environment:
       # use only with google cloud storage (gcs) gateway
@@ -29,13 +30,12 @@ services:
     networks:
       - main_network
     depends_on:
-      - db.internal
       - rabbit.docker
 
   webapp.docker:
     container_name: webapp
     build: './apiGateway'
-    command: bash -c "python manage.py migrate && gunicorn apiGateway.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    command: bash -c "python manage.py makemigrations && python manage.py migrate && gunicorn apiGateway.wsgi:application --bind 0.0.0.0:8000 --workers 1 --log-level debug"
     volumes:
       - ./apiGateway/:/usr/src/apiGateway
     depends_on:
@@ -53,13 +53,44 @@ services:
     ports:
       - 5672:5672
 
-  vidapp.internal:
-    container_name: vidapp
-    build: './vidapp'
+  msgdispatcher.internal:
+    container_name: msgdispatcher
+    build: './msgdispatcher'
     command: bash -c "python -u rabbit.py"
     volumes:
-      - ./vidapp/rabbit.py:/usr/src/vidapp/rabbit.py
-      - ./utilsClasses/rabbitConnection.py:/usr/src/vidapp/rabbitConnection.py
+      - ./msgdispatcher/rabbit.py:/usr/src/msgdispatcher/rabbit.py
+      - ./msgdispatcher/c_msgdispatcher.py:/usr/src/msgdispatcher/c_msgdispatcher.py
+      - ./utils/c_rabbitWrapper.py:/usr/src/msgdispatcher/utils/c_rabbitWrapper.py
+      - ./utils/utils.py:/usr/src/msgdispatcher/utils/utils.py
+    depends_on:
+      - rabbit.docker
+    networks:
+      - main_network
+
+  videoanalyzer.internal:
+    #container_name: videoanalyzer
+    build: './videoanalyzer'
+    command: bash -c "python -u rabbit.py"
+    volumes:
+      - ./videoanalyzer/rabbit.py:/usr/src/videoanalyzer/rabbit.py
+      - ./videoanalyzer/c_videoanalyzer.py:/usr/src/videoanalyzer/c_videoanalyzer.py
+      - ./utils/c_rabbitWrapper.py:/usr/src/videoanalyzer/utils/c_rabbitWrapper.py
+      - ./utils/utils.py:/usr/src/videoanalyzer/utils/utils.py
+    depends_on:
+      - rabbit.docker
+    networks:
+      - main_network
+
+  videoformatter.internal:
+    container_name: videoformatter
+    build: './videoformatter'
+    command: bash -c "python -u rabbit.py"
+    volumes:
+      - ./videoformatter/:/usr/src/videoformatter/
+      #- ./videoformatter/rabbit.py:/usr/src/videoformatter/rabbit.py
+      #- ./videoformatter/c_videoformatter.py:/usr/src/videoformatter/c_videoformatter.py
+      - ./utils/c_rabbitWrapper.py:/usr/src/videoformatter/utils/c_rabbitWrapper.py
+      - ./utils/utils.py:/usr/src/videoformatter/utils/utils.py
     depends_on:
       - rabbit.docker
     networks:

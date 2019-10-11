@@ -33,6 +33,7 @@ class rabbitConnection :
 
 
         def callback(self,ch, method, properties, body):
+                print("penis")
                 body_js = json.loads(body.decode('utf-8'))
                 if (re.search(EVENT_NAME, body_js['EventName'])) :
                         if (re.search(INITIAL_KEY, body_js['Key'])) :

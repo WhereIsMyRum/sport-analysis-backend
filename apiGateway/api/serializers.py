@@ -1,6 +1,7 @@
 from rest_framework import serializers, exceptions
 from api.models import UserStorage, UserStorageEntries
 from django.utils import timezone
+import datetime
 
 class UserStorageSerializer(serializers.ModelSerializer) :
     class Meta:
@@ -14,7 +15,7 @@ class UserStorageSerializer(serializers.ModelSerializer) :
         userstorage = UserStorage()
 
         userstorage.user_id = request['user_id']
-        userstorage.created = timezone.now()
+        userstorage.created = datetime.datetime.utcnow()
         userstorage.bucket_name = bucket_name
         userstorage.path='user_{}'.format(userstorage.user_id)
 
@@ -27,15 +28,15 @@ class UserStorageEntriesSerializer(serializers.ModelSerializer) :
 
     class Meta:
         model = UserStorageEntries
-        fields = ('id','created','path','title','storage')
+        fields = ('id','created','path','title','userstorage')
     
-    def create(self,storage,user_id,entry_id) :
+    def create(self,storage,user_id,entry_folder) :
         storageentry = UserStorageEntries()
 
-        storageentry.created=timezone.now()
-        storageentry.path="user_{}/entry_{}".format(user_id, entry_id)
+        storageentry.created=datetime.datetime.utcnow()
+        storageentry.path="user_{}/{}".format(user_id, entry_folder)
         storageentry.title = "Title"
-        storageentry.storage=storage
+        storageentry.userstorage=storage
 
         storageentry.save()
         return storageentry

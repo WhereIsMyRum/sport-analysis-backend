@@ -1,5 +1,5 @@
 from django.shortcuts import render
-import requests, minio, os
+import requests, minio, subprocess, hashlib, datetime
 from minio.error import (ResponseError, BucketAlreadyOwnedByYou,
                          BucketAlreadyExists)
 from rest_framework.views import APIView
@@ -16,8 +16,8 @@ class UploadView(APIView) :
 
     def get(self, request) :
         minioClient = utils.getMinioClient()
-        file_name = "uncut_video"
-
+        file_name = "uncut.mp4"
+        print("penis")
         if (request.GET.get('fname')) :
             file_name = request.GET.get('fname')
 
@@ -28,23 +28,29 @@ class UploadView(APIView) :
         except :
             serializer = serializers.UserStorageSerializer()
             userstorage = serializer.create(request_hardcoded, settings.DEFAULT_BUCKET)
-            os.system('touch readme.txt')
+            subprocess.run(['mkdir -p /tmp'])
+            subprocess.run(['touch /tmp/readme.txt'])
             with open ('readme.txt', 'rb') as file_data :
-                file_stat = os.stat('readme.txt')
+                file_stat = os.stat('/tmp/readme.txt')
                 minioClient.put_object(settings.DEFAULT_BUCKET, "user_{}/readme.txt".format(request_hardcoded['user_id']), file_data, file_stat.st_size)
-            os.system('rm readme.txt')
-        
+            subprocess.run(['rm /tmp/readme.txt'])
+            storage_queryset = models.UserStorage.objects.get(user_id = request_hardcoded['user_id'])
+
+        entry_folder_name = self.getUniqueFolderName(request_hardcoded['user_id'])
+
         try:
-            entries_queryset = models.UserStorageEntries.objects.filter(storage_id = storage_queryset.user_id)
             serializer = serializers.UserStorageEntriesSerializer()
-            subfolder_entry_id = len(entries_queryset) + 1
-            #storage_entry = serializer.create(storage_queryset,request_hardcoded['user_id'],subfolder_entry_id)
-
+            storage_entry = serializer.create(storage_queryset, request_hardcoded['user_id'], entry_folder_name)  
         except :
-            serializer = serializers.UserStorageEntriesSerializer()
-            subfolder_entry_id = 1
-            #storage_entry = serializer.create(storage_queryset,request_hardcoded['user_id'],subfolder_entry_id)
+            print("unable to create db entry")
 
-        presigned = minioClient.presigned_put_object(settings.DEFAULT_BUCKET, "user_{}/entry_{}/{}".format(request_hardcoded['user_id'], subfolder_entry_id, file_name))
+        presigned = minioClient.presigned_put_object(settings.DEFAULT_BUCKET, "user_{}/{}/{}".format(request_hardcoded['user_id'], entry_folder_name, file_name))
 
         return Response(presigned)
+
+    def getUniqueFolderName(self, user_id) :
+        m = hashlib.md5()
+        input_string = datetime.datetime.utcnow().strftime('%B %d %Y - %H:%M:%S') + str(user_id)
+        m.update(input_string.encode('utf-8'))
+
+        return m.hexdigest()

@@ -12,9 +12,15 @@ SQS=$(./mc admin info server s3 | grep SQS | cut -c12-)
 while [ -z "$SQS" ]
 do 
     docker-compose stop s3.docker
-    docker-compose stop vidapp.internal
+    docker-compose stop msgdispatcher.internal
+    docker-compose stop videoanalyzer.internal
+    docker-compose stop videoformatter.internal
+    docker-compose stop nginx
     docker-compose up -d s3.docker
-    docker-compose up -d vidapp.internal
+    docker-compose up -d msgdispatcher.internal
+    docker-compose up -d videoanalyzer.internal
+    docker-compose up -d videoformatter.internal
+    docker-compose up -d nginx
     sleep 5
     SQS=$(./mc admin info server s3 | grep SQS | cut -c12-)
 done
