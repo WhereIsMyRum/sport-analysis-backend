@@ -12,6 +12,7 @@ class c_msgdispatcher(c_rabbitWrapper) :
             if (re.search(INITIAL_KEY, body_js['Key'])) :
                 self.publish(exchange='',routing_key='video_analyzer_queue', body=body_js['Key'])
                 self.updateUserStorageEntries(body_js['Key'])
+                print("uploaded new video")
             if (re.search(RESULT_KEY, body_js['Key'])) :
                 print("uploaded cut videos")
     
@@ -25,7 +26,7 @@ class c_msgdispatcher(c_rabbitWrapper) :
     def updateUserStorageEntries(self, key) :
         db = self.getDBConnection()
         bucketRelPath = self.extractBucketRelativePath(key)
-
+        print(bucketRelPath)
         cursor = db.cursor()
         cursor.execute("UPDATE api_userstorageentries SET uploaded=1 WHERE path='{}'".format(
                         bucketRelPath

@@ -1,7 +1,10 @@
+
+
+
 from utils.c_rabbitWrapper import c_rabbitWrapper
 import utils.utils as utils
 import json, re, time, subprocess, os, threading, concurrent.futures
-from math import ceil
+from math import ceil, floor
 
 class c_videoformatter(c_rabbitWrapper) :
 
@@ -23,7 +26,13 @@ class c_videoformatter(c_rabbitWrapper) :
         self.cutVideo(body['cut_out'], file_location)
 
     def cutVideo(self, time_periods, file_location) :
-        keys = [time_periods[key] for key in time_periods]
+        #keys = [time_periods[key] for key in time_periods]
+        keys = []
+        for val in time_periods :
+            keys.append ({
+                "start" : floor(float(val['value']) - 2),
+                "end" : floor(float(val['value'] + 2))
+            })
         file_location = [file_location for i in range(len(keys))]
         lock = [True for i in range(len(keys))]
         self.threadExecutor.map(self.cutSaveAndPublish, keys, file_location, lock)
@@ -40,7 +49,8 @@ class c_videoformatter(c_rabbitWrapper) :
 
         pcode = subprocess.call(['ffmpeg', '-v', 'quiet', '-y', '-i', 
                          '/tmp/{}/video_uncut.mp4'.format(file_location['folder']),
-                         '-vcodec', 'copy', '-acodec', 'copy', '-ss', start_ffmpeg, '-t', end_ffmpeg, '-sn',
+                         #'-vcodec', 'copy', '-acodec', 'copy', '-copyinkf', '-ss', start_ffmpeg, '-t', end_ffmpeg, '-sn',
+                         '-copyinkf', '-ss', start_ffmpeg, '-t', end_ffmpeg, '-sn',
                          output_file])
 
         if (pcode == 0) :

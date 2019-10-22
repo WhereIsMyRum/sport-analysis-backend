@@ -5,7 +5,7 @@ S3_ACCESS_KEY = "admin"
 S3_SECRET_KEY = "password"
 
 RESULT_KEY = r"\/user_[0-9]*\/[a-z0-9]*\/cut\/[a-zA-Z0-9-_]*.(mp4|vid)$"
-INITIAL_KEY = r"\/user_[0-9]*\/[a-z0-9]*\/[a-zA-Z-_]*.(mp4|vid)$"
+INITIAL_KEY = r"\/(user_[0-9]*\/[a-z0-9]*)\/[a-zA-Z-_]*.mp4$"
 EVENT_NAME = "ObjectCreated:Put"
 
 DB_HOST = 'db.internal'
