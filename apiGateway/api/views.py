@@ -1,8 +1,11 @@
 from django.shortcuts import render
+from django.utils.datastructures import MultiValueDictKeyError
 import requests, minio, subprocess, hashlib, datetime
 from minio.error import (ResponseError, BucketAlreadyOwnedByYou,
                          BucketAlreadyExists)
+from rest_framework import status
 from rest_framework.views import APIView
+from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from api import utils, models, serializers
@@ -13,40 +16,29 @@ from django.conf import settings
 
 class UploadView(APIView) :
     permission_class = [AllowAny]
+    minioClient = utils.getMinioClient()
 
-    def get(self, request) :
-        minioClient = utils.getMinioClient()
-        file_name = "uncut.mp4"
-        print("penis")
-        if (request.GET.get('fname')) :
-            file_name = request.GET.get('fname')
+    def post(self, request) :
+        file_name = "video.mp4"
 
-        request_hardcoded={'user_id':1}
+        if not self.validate_request() :
+            return Response({"user_id":"This field cannot be empty", "title":"This field cannot be empty"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            storage_queryset = models.UserStorage.objects.get(user_id = request_hardcoded['user_id'])
+            storage_queryset = models.UserStorage.objects.get(user_id = request.data['user_id'])
         except :
             serializer = serializers.UserStorageSerializer()
-            userstorage = serializer.create(request_hardcoded, settings.DEFAULT_BUCKET)
-            subprocess.run(['mkdir -p /tmp'])
-            subprocess.run(['touch /tmp/readme.txt'])
-            with open ('readme.txt', 'rb') as file_data :
-                file_stat = os.stat('/tmp/readme.txt')
-                minioClient.put_object(settings.DEFAULT_BUCKET, "user_{}/readme.txt".format(request_hardcoded['user_id']), file_data, file_stat.st_size)
-            subprocess.run(['rm /tmp/readme.txt'])
-            storage_queryset = models.UserStorage.objects.get(user_id = request_hardcoded['user_id'])
+            serializer.create(request, settings.DEFAULT_BUCKET)
+            storage_queryset = models.UserStorage.objects.get(user_id = request.data['user_id'])
 
-        entry_folder_name = self.getUniqueFolderName(request_hardcoded['user_id'])
+        entry_folder_name = self.getUniqueFolderName(request.data['user_id'])
 
-        try:
-            serializer = serializers.UserStorageEntriesSerializer()
-            storage_entry = serializer.create(storage_queryset, request_hardcoded['user_id'], entry_folder_name)  
-        except :
-            print("unable to create db entry")
+        serializer = serializers.UserStorageEntriesSerializer()
+        serializer.create(request, storage_queryset, entry_folder_name)
 
-        presigned = minioClient.presigned_put_object(settings.DEFAULT_BUCKET, "user_{}/{}/{}".format(request_hardcoded['user_id'], entry_folder_name, file_name))
+        presigned = self.minioClient.presigned_put_object(settings.DEFAULT_BUCKET, "user_{}/{}/{}".format(request.data['user_id'], entry_folder_name, file_name))
 
-        return Response(presigned)
+        return Response({"data":{"upload_url":presigned}}, status=status.HTTP_201_CREATED)
 
     def getUniqueFolderName(self, user_id) :
         m = hashlib.md5()
@@ -54,3 +46,48 @@ class UploadView(APIView) :
         m.update(input_string.encode('utf-8'))
 
         return m.hexdigest()
+
+    def validate_request(self) :
+        if 'user_id' in self.request.data and 'title' in self.request.data :
+            return True
+        else :
+            return False
+
+class GamesView(ListAPIView) :
+    permission_classes = [AllowAny]
+    serializer_class = serializers.UserStorageEntriesSerializer
+
+    def list(self, request) :
+        queryset = self.get_queryset()
+        serializer = serializers.UserStorageEntriesSerializer(queryset, many=True)
+        return Response({"data":serializer.data}, status=status.HTTP_200_OK)
+
+    def get_queryset(self) :
+        queryset = models.UserStorageEntries.objects.filter(user_storage_id=self.request.data['user_id'], analyzed=1)
+        
+        return queryset
+
+class GamesDetailedView(ListAPIView) :
+    permission_classes = [AllowAny]
+    serializer_class = serializers.UserStorageAnalyzedEntriesSerializer
+    minioClient = utils.getMinioClient()
+
+    def list(self, request, pk=None) :
+        queryset = self.get_queryset()
+        serializer = serializers.UserStorageAnalyzedEntriesSerializer(queryset, many=True)
+        response_data = []
+
+        for data in serializer.data :
+            modified_response_data = {}
+            modified_response_data['created'] = data['created']
+            modified_response_data['label'] = data['label']
+            modified_response_data['download_url'] = self.minioClient.presigned_get_object(settings.DEFAULT_BUCKET, data['path'])
+            response_data.append(modified_response_data)
+        print(response_data)
+
+        return Response({"data":response_data}, status=status.HTTP_200_OK)
+
+    def get_queryset(self) :
+        queryset = models.UserStorageAnalyzedEntries.objects.filter(user_storage_entry_id = self.kwargs['pk'], uploaded=1)
+
+        return queryset

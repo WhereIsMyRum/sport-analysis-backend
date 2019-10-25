@@ -21,12 +21,12 @@ def getMinioClient() :
     return minioClient
 
 def getBucketUserFolderAndFileFromPath(path) :
-    match = re.search(r'^([a-zA-Z0-9-_]*)\/(user_[0-9]*)\/([a-zA-Z0-9]*)\/(.*)$', path)
+    match = re.search(r'^([a-zA-Z0-9-_]*)\/(user_[0-9]*)\/([a-zA-Z0-9]*)(\/cut)?\/(.*)$', path)
     file_location = {
         'bucket': match.group(1),
         'user': match.group(2),
         'folder': match.group(3),
-        'file': match.group(4)
+        'file': match.group(5)
     }
     return file_location
 

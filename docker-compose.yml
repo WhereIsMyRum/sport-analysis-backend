@@ -35,9 +35,9 @@ services:
   webapp.docker:
     container_name: webapp
     build: './apiGateway'
-    command: bash -c "python manage.py makemigrations && python manage.py migrate && gunicorn apiGateway.wsgi:application --bind 0.0.0.0:8000 --workers 1 --log-level debug"
+    command: bash -c "python manage.py makemigrations && python manage.py migrate && gunicorn apiGateway.wsgi:application --bind 0.0.0.0:8000 --workers 1 --log-level debug --reload"
     volumes:
-      - ./apiGateway/:/usr/src/apiGateway
+      - ./apiGateway/:/usr/src/apiGateway/
     depends_on:
       - db.internal
     networks:

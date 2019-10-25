@@ -8,7 +8,7 @@ from math import ceil, floor
 
 class c_videoformatter(c_rabbitWrapper) :
 
-    threadExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+    #threadExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
     minioClient = utils.getMinioClient()
 
     def callback(self, ch, method, properties, body):
@@ -20,7 +20,8 @@ class c_videoformatter(c_rabbitWrapper) :
 
         self.createDirectories(file_location['folder'])
 
-        self.threadExecutor.map(self.saveVideo, [file_location])
+        threadExecutor =  concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        threadExecutor.map(self.saveVideo, [file_location])
         time.sleep(1)
 
         self.cutVideo(body['cut_out'], file_location)
@@ -31,11 +32,17 @@ class c_videoformatter(c_rabbitWrapper) :
         for val in time_periods :
             keys.append ({
                 "start" : floor(float(val['value']) - 2),
-                "end" : floor(float(val['value'] + 2))
+                "end" : floor(float(val['value'] + 2)),
+                "initial" : floor(float(val['value'])),
+                "label" : val['label'][1:-1]
             })
-        file_location = [file_location for i in range(len(keys))]
+        file_location_list = [file_location for i in range(len(keys))]
         lock = [True for i in range(len(keys))]
-        self.threadExecutor.map(self.cutSaveAndPublish, keys, file_location, lock)
+        #self.threadExecutor.map(self.cutSaveAndPublish, keys, file_location, lock)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as threadExecutor :
+            threadExecutor.map(self.cutSaveAndPublish, keys, file_location_list, lock)
+        subprocess.Popen(['rm','-r','/tmp/{}'.format(file_location['folder'])])
+        print("Finished processing")
 
     def cutSaveAndPublish(self, start_end, file_location, lock=False) :
 
@@ -45,7 +52,7 @@ class c_videoformatter(c_rabbitWrapper) :
 
         start_ffmpeg = utils.convertTimeToHMS(start_end["start"])
         end_ffmpeg = utils.convertTimeToHMS(str(float(start_end["end"])-float(start_end["start"])))
-        output_file = '/tmp/{}/cut/video_{}_{}.mp4'.format(file_location['folder'], start_end["start"], start_end["end"])
+        output_file = '/tmp/{}/cut/{}-{}-{}.mp4'.format(file_location['folder'],start_end['label'], start_end["start"], start_end["end"])
 
         pcode = subprocess.call(['ffmpeg', '-v', 'quiet', '-y', '-i', 
                          '/tmp/{}/video_uncut.mp4'.format(file_location['folder']),
@@ -58,9 +65,10 @@ class c_videoformatter(c_rabbitWrapper) :
                 with open(output_file, 'rb') as vid:
 
                     self.minioClient.put_object(file_location['bucket'],
-                                                file_location['user'] + '/' + file_location['folder'] + '/cut/' + 'video_{}_{}.mp4'.format(start_end['start'],start_end['end']),
+                                                file_location['user'] + '/' + file_location['folder'] + '/cut/' + '{}-{}.mp4'.format(start_end['label'],start_end['initial']),
                                                 vid,
                                                 os.stat(output_file).st_size)
+                subprocess.Popen(['rm',output_file])
             except Exception as e:
                 print(e)
 

@@ -33,27 +33,11 @@ class c_videoanalyzer(c_rabbitWrapper) :
                 },
                 {
                     "label": "'serv_toss'",
-                    "value": 31.43143143143143
-                },
-                {
-                    "label": "'serv_toss'",
                     "value": 31.7650984317651
-                },
-                {
-                    "label": "'serv_toss'",
-                    "value": 32.098765432098766
                 },
                 {
                     "label": "'serv_smash'",
                     "value": 32.7660994327661
-                },
-                {
-                    "label": "'serv_toss'",
-                    "value": 55.12178845512179
-                },
-                {
-                    "label": "'serv_toss'",
-                    "value": 55.45545545545546
                 },
                 {
                     "label": "'serv_toss'",
@@ -70,14 +54,6 @@ class c_videoanalyzer(c_rabbitWrapper) :
                 {
                     "label": "'serv_toss'",
                     "value": 65.79913246579913
-                },
-                {
-                    "label": "'serv_toss'",
-                    "value": 66.1327994661328
-                },
-                {
-                    "label": "'serv_smash'",
-                    "value": 66.46646646646647
                 },
                 {
                     "label": "'serv_smash'",
@@ -97,14 +73,6 @@ class c_videoanalyzer(c_rabbitWrapper) :
                 },
                 {
                     "label": "'serv_toss'",
-                    "value": 99.16583249916583
-                },
-                {
-                    "label": "'serv_toss'",
-                    "value": 99.4994994994995
-                },
-                {
-                    "label": "'serv_toss'",
                     "value": 99.83316649983317
                 },
                 {
@@ -113,23 +81,11 @@ class c_videoanalyzer(c_rabbitWrapper) :
                 },
                 {
                     "label": "'serv_toss'",
-                    "value": 103.83717050383717
-                },
-                {
-                    "label": "'serv_toss'",
                     "value": 104.17083750417085
                 },
                 {
                     "label": "'serv_toss'",
-                    "value": 106.50650650650651
-                },
-                {
-                    "label": "'serv_toss'",
                     "value": 106.84017350684017
-                },
-                {
-                    "label": "'serv_smash'",
-                    "value": 107.17384050717385
                 },
                 {
                     "label": "'serv_smash'",
@@ -138,14 +94,6 @@ class c_videoanalyzer(c_rabbitWrapper) :
                 {
                     "label": "'serv_toss'",
                     "value": 134.8682015348682
-                },
-                {
-                    "label": "'serv_toss'",
-                    "value": 135.20186853520187
-                },
-                {
-                    "label": "'serv_toss'",
-                    "value": 135.53553553553553
                 },
                 {
                     "label": "'serv_smash'",
@@ -165,18 +113,6 @@ class c_videoanalyzer(c_rabbitWrapper) :
                 },
                 {
                     "label": "'serv_toss'",
-                    "value": 310.37704371037705
-                },
-                {
-                    "label": "'serv_toss'",
-                    "value": 310.7107107107107
-                },
-                {
-                    "label": "'serv_toss'",
-                    "value": 311.37804471137804
-                },
-                {
-                    "label": "'serv_toss'",
                     "value": 311.7117117117117
                 },
                 {
@@ -190,10 +126,6 @@ class c_videoanalyzer(c_rabbitWrapper) :
                 {
                     "label": "'backhand'",
                     "value": 504.2375709042376
-                },
-                {
-                    "label": "'backhand'",
-                    "value": 504.57123790457126
                 },
                 {
                     "label": "'backhand'",
@@ -220,7 +152,7 @@ class c_videoanalyzer(c_rabbitWrapper) :
         time_periods = self.analyzeVideo()
         time_periods['path'] = body
 
-        temp_mq_connection.publish(exchange='', routing_key="video_formatter_queue", body=json.dumps(time_periods))
+        temp_mq_connection.publish(exchange='', routing_key="message_dispatcher_queue", body=json.dumps(time_periods))
         temp_mq_connection.close()
 
         subprocess.Popen(['rm -r', '/tmp/{}'.format(file_location['folder'])])
