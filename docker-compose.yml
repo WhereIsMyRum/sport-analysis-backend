@@ -58,10 +58,12 @@ services:
     build: './msgdispatcher'
     command: bash -c "python -u rabbit.py"
     volumes:
-      - ./msgdispatcher/rabbit.py:/usr/src/msgdispatcher/rabbit.py
-      - ./msgdispatcher/c_msgdispatcher.py:/usr/src/msgdispatcher/c_msgdispatcher.py
-      - ./utils/c_rabbitWrapper.py:/usr/src/msgdispatcher/utils/c_rabbitWrapper.py
-      - ./utils/utils.py:/usr/src/msgdispatcher/utils/utils.py
+      #- ./msgdispatcher/rabbit.py:/usr/src/msgdispatcher/rabbit.py
+      #- ./msgdispatcher/c_msgdispatcher.py:/usr/src/msgdispatcher/c_msgdispatcher.py
+      - ./msgdispatcher/:/usr/src/msgdispatcher/
+      #- ./utils/c_rabbitWrapper.py:/usr/src/msgdispatcher/utils/c_rabbitWrapper.py
+      #- ./utils/utils.py:/usr/src/msgdispatcher/utils/utils.py
+      - ./utils/:/usr/src/msgdispatcher/utils/
     depends_on:
       - rabbit.docker
     networks:
@@ -72,10 +74,12 @@ services:
     build: './videoanalyzer'
     command: bash -c "python -u rabbit.py"
     volumes:
-      - ./videoanalyzer/rabbit.py:/usr/src/videoanalyzer/rabbit.py
-      - ./videoanalyzer/c_videoanalyzer.py:/usr/src/videoanalyzer/c_videoanalyzer.py
-      - ./utils/c_rabbitWrapper.py:/usr/src/videoanalyzer/utils/c_rabbitWrapper.py
-      - ./utils/utils.py:/usr/src/videoanalyzer/utils/utils.py
+      #- ./videoanalyzer/rabbit.py:/usr/src/videoanalyzer/rabbit.py
+      #- ./videoanalyzer/c_videoanalyzer.py:/usr/src/videoanalyzer/c_videoanalyzer.py
+      - ./videoanalyzer/:/usr/src/videoanalyzer/
+      #- ./utils/c_rabbitWrapper.py:/usr/src/videoanalyzer/utils/c_rabbitWrapper.py
+      #- ./utils/utils.py:/usr/src/videoanalyzer/utils/utils.py
+      - ./utils/:/usr/src/videoanalyzer/utils/
     depends_on:
       - rabbit.docker
     networks:
@@ -89,8 +93,9 @@ services:
       - ./videoformatter/:/usr/src/videoformatter/
       #- ./videoformatter/rabbit.py:/usr/src/videoformatter/rabbit.py
       #- ./videoformatter/c_videoformatter.py:/usr/src/videoformatter/c_videoformatter.py
-      - ./utils/c_rabbitWrapper.py:/usr/src/videoformatter/utils/c_rabbitWrapper.py
-      - ./utils/utils.py:/usr/src/videoformatter/utils/utils.py
+      #- ./utils/c_rabbitWrapper.py:/usr/src/videoformatter/utils/c_rabbitWrapper.py
+      #- ./utils/utils.py:/usr/src/videoformatter/utils/utils.py
+      - ./utils/:/usr/src/videoformatter/utils/
     depends_on:
       - rabbit.docker
     networks:
@@ -109,6 +114,7 @@ services:
     volumes:
         - ./config/nginx/conf.d:/etc/nginx/conf.d
         - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf
+        #- ./config/nginx/:/etc/nginx/
     depends_on:
       - webapp.docker
       - db.internal
