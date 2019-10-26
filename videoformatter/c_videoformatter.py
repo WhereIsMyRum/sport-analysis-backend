@@ -8,23 +8,26 @@ from math import ceil, floor
 
 class c_videoformatter(c_rabbitWrapper) :
 
-    #threadExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+    threadExecutor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
     minioClient = utils.getMinioClient()
 
     def callback(self, ch, method, properties, body):
         print("received new msg")
         
         body = json.loads(body.decode('utf-8'))
+        if 'delete' in body :
+            subprocess.Popen(['rm','-r','/tmp/{}'.format(body['delete'])])
 
-        file_location = utils.getBucketUserFolderAndFileFromPath(body['path'])
+        else :
+            file_location = utils.getBucketUserFolderAndFileFromPath(body['path'])
 
-        self.createDirectories(file_location['folder'])
+            self.createDirectories(file_location['folder'])
 
-        threadExecutor =  concurrent.futures.ThreadPoolExecutor(max_workers=1)
-        threadExecutor.map(self.saveVideo, [file_location])
-        time.sleep(1)
+            #threadExecutor =  concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            self.threadExecutor.map(self.saveVideo, [file_location])
+            time.sleep(1)
 
-        self.cutVideo(body['cut_out'], file_location)
+            self.cutVideo(body['cut_out'], file_location)
 
     def cutVideo(self, time_periods, file_location) :
         #keys = [time_periods[key] for key in time_periods]
@@ -38,11 +41,9 @@ class c_videoformatter(c_rabbitWrapper) :
             })
         file_location_list = [file_location for i in range(len(keys))]
         lock = [True for i in range(len(keys))]
-        #self.threadExecutor.map(self.cutSaveAndPublish, keys, file_location, lock)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as threadExecutor :
-            threadExecutor.map(self.cutSaveAndPublish, keys, file_location_list, lock)
-        subprocess.Popen(['rm','-r','/tmp/{}'.format(file_location['folder'])])
-        print("Finished processing")
+        self.threadExecutor.map(self.cutSaveAndPublish, keys, file_location_list, lock)
+        #with concurrent.futures.ThreadPoolExecutor(max_workers=5) as threadExecutor :
+        #    threadExecutor.map(self.cutSaveAndPublish, keys, file_location_list, lock)
 
     def cutSaveAndPublish(self, start_end, file_location, lock=False) :
 

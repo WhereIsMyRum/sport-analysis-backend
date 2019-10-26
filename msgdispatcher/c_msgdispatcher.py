@@ -27,6 +27,7 @@ class c_msgdispatcher(c_rabbitWrapper) :
                     self.dbUpdate('api_userstorageanalyzedentries', f"uploaded=1", "path='{}'".format(path['user']+"/"+path['folder']+"/cut/"+path['file']))
                     if (expected_number_of_clips == actual_number_of_clips) :
                         self.dbUpdate('api_userstorageentries', 'analyzed=1', "path='{}'".format(path['user']+"/"+path['folder']))
+                        self.publish(exchange='', routing_key='video_formatter_queue', body=json.dumps({"delete":path['folder']}))
 
         except Exception as ex:
             db, close_connection = self.getDBConnection(None)
