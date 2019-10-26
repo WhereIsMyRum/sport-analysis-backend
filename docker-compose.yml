@@ -15,30 +15,89 @@ services:
   s3.docker:
     image: minio/minio
     container_name: s3
-    command:
-      server /data
     #command:
     #  gateway gcs
     volumes:
       - "dev-volume:/data"
-      - ./credentials.json:/credentials.json
+      - ./s3/credentials.json:/credentials.json
+      #- ./s3/config.json:/data/.minio.sys/config/config.json
+    command: server /data
     environment:
+      # use only with google cloud storage (gcs) gateway
       #GOOGLE_APPLICATION_CREDENTIALS: '/credentials.json'
       MINIO_ACCESS_KEY: 'admin'
       MINIO_SECRET_KEY: 'password'
     networks:
       - main_network
     depends_on:
-      - db.internal
+      - rabbit.docker
 
   webapp.docker:
     container_name: webapp
-    build: .
-    command: bash -c "python manage.py migrate && gunicorn apiGateway.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    build: './apiGateway'
+    command: bash -c "python manage.py makemigrations && python manage.py migrate && gunicorn apiGateway.wsgi:application --bind 0.0.0.0:8000 --workers 1 --log-level debug --reload"
     volumes:
-      - ./apiGateway/:/usr/src/apiGateway
+      - ./apiGateway/:/usr/src/apiGateway/
     depends_on:
       - db.internal
+    networks:
+      - main_network
+
+  rabbit.docker:
+    image: rabbitmq:3.7.18-management
+    # below image used if no management is needed
+    #image: rabbitmq:latest
+    container_name: rabbit
+    networks: 
+      - main_network
+    ports:
+      - 5672:5672
+
+  msgdispatcher.internal:
+    container_name: msgdispatcher
+    build: './msgdispatcher'
+    command: bash -c "python -u rabbit.py"
+    volumes:
+      #- ./msgdispatcher/rabbit.py:/usr/src/msgdispatcher/rabbit.py
+      #- ./msgdispatcher/c_msgdispatcher.py:/usr/src/msgdispatcher/c_msgdispatcher.py
+      - ./msgdispatcher/:/usr/src/msgdispatcher/
+      #- ./utils/c_rabbitWrapper.py:/usr/src/msgdispatcher/utils/c_rabbitWrapper.py
+      #- ./utils/utils.py:/usr/src/msgdispatcher/utils/utils.py
+      - ./utils/:/usr/src/msgdispatcher/utils/
+    depends_on:
+      - rabbit.docker
+    networks:
+      - main_network
+
+  videoanalyzer.internal:
+    #container_name: videoanalyzer
+    build: './videoanalyzer'
+    command: bash -c "python -u rabbit.py"
+    volumes:
+      #- ./videoanalyzer/rabbit.py:/usr/src/videoanalyzer/rabbit.py
+      #- ./videoanalyzer/c_videoanalyzer.py:/usr/src/videoanalyzer/c_videoanalyzer.py
+      - ./videoanalyzer/:/usr/src/videoanalyzer/
+      #- ./utils/c_rabbitWrapper.py:/usr/src/videoanalyzer/utils/c_rabbitWrapper.py
+      #- ./utils/utils.py:/usr/src/videoanalyzer/utils/utils.py
+      - ./utils/:/usr/src/videoanalyzer/utils/
+    depends_on:
+      - rabbit.docker
+    networks:
+      - main_network
+
+  videoformatter.internal:
+    container_name: videoformatter
+    build: './videoformatter'
+    command: bash -c "python -u rabbit.py"
+    volumes:
+      - ./videoformatter/:/usr/src/videoformatter/
+      #- ./videoformatter/rabbit.py:/usr/src/videoformatter/rabbit.py
+      #- ./videoformatter/c_videoformatter.py:/usr/src/videoformatter/c_videoformatter.py
+      #- ./utils/c_rabbitWrapper.py:/usr/src/videoformatter/utils/c_rabbitWrapper.py
+      #- ./utils/utils.py:/usr/src/videoformatter/utils/utils.py
+      - ./utils/:/usr/src/videoformatter/utils/
+    depends_on:
+      - rabbit.docker
     networks:
       - main_network
 
@@ -50,9 +109,12 @@ services:
       - 443:443
       - 3306:3306
       - 9000:9000
+      # below ports are only needed if management panel needs to be enabled
+      - 15672:15672
     volumes:
         - ./config/nginx/conf.d:/etc/nginx/conf.d
         - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf
+        #- ./config/nginx/:/etc/nginx/
     depends_on:
       - webapp.docker
       - db.internal
