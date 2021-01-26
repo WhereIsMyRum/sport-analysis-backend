@@ -1,7 +1,6 @@
 <html>
 <body>
-<!--Sport analysis HardTech Enterpreneurship backend infrastructure-->
-<h1 class="title">Sport analysis backend</h1>
+<h1 class="title">Video analysis pipeline</h1>
 <h3 class="why">Powód</h3>
 <p class="why">Why</p>
 <h3 class="what">Cel</h3>
